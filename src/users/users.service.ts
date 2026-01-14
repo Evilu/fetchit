@@ -41,6 +41,8 @@ export class UsersService {
           username: true,
           status: true,
           groupId: true,
+          createdAt: true,
+          updatedAt: true,
         },
       }),
       this.prisma.user.count(),
@@ -70,6 +72,8 @@ export class UsersService {
         username: true,
         status: true,
         groupId: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
