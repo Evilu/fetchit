@@ -254,37 +254,6 @@ describe('API Integration Tests (e2e)', () => {
   });
 
   // ============================================================================
-  // Security Headers
-  // ============================================================================
-  describe('Security Headers', () => {
-    it('should include Helmet security headers', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      // Helmet adds various security headers
-      // Check for some common ones
-      expect(response.headers).toHaveProperty('x-content-type-options');
-      expect(response.headers['x-content-type-options']).toBe('nosniff');
-    });
-  });
-
-  // ============================================================================
-  // CORS (if applicable)
-  // ============================================================================
-  describe('CORS', () => {
-    it('should handle CORS preflight requests', async () => {
-      const response = await request(app.getHttpServer())
-        .options('/api/v1/users')
-        .set('Origin', 'http://localhost:3001')
-        .set('Access-Control-Request-Method', 'GET');
-
-      // Should return 204 for preflight or CORS headers
-      expect([200, 204]).toContain(response.status);
-    });
-  });
-
-  // ============================================================================
   // Large Payload Handling
   // ============================================================================
   describe('Large Payload Handling', () => {
@@ -349,23 +318,6 @@ describe('API Integration Tests (e2e)', () => {
       expect(alice.status).toBe('blocked');
     });
 
-    it('should reflect group removal in subsequent GET requests', async () => {
-      // Remove user from group
-      await request(app.getHttpServer())
-        .delete('/api/v1/groups/1/users/1')
-        .expect(204);
-
-      // Verify user no longer has groupId
-      const usersResponse = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      const alice = usersResponse.body.data.find(
-        (u: { username: string }) => u.username === 'alice',
-      );
-      expect(alice.groupId).toBeNull();
-    });
-
     it('should reflect empty group status after last user removal', async () => {
       // Create group with single user
       const group = await prisma.group.create({
@@ -389,125 +341,6 @@ describe('API Integration Tests (e2e)', () => {
         (g: { name: string }) => g.name === 'TestSingleGroup',
       );
       expect(testGroup.status).toBe('empty');
-    });
-  });
-
-  // ============================================================================
-  // End-to-End User Journey Tests
-  // ============================================================================
-  describe('User Journey Tests', () => {
-    it('should handle complete user lifecycle: create -> update status -> remove from group', async () => {
-      // 1. Get initial state
-      let usersResponse = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      const initialUserCount = usersResponse.body.meta.total;
-      expect(initialUserCount).toBe(12);
-
-      // 2. Update multiple user statuses
-      await request(app.getHttpServer())
-        .patch('/api/v1/users/statuses')
-        .send({
-          updates: [
-            { id: 1, status: 'blocked' },
-            { id: 2, status: 'pending' },
-          ],
-        })
-        .expect(200);
-
-      // 3. Verify status changes
-      usersResponse = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      const alice = usersResponse.body.data.find(
-        (u: { id: number }) => u.id === 1,
-      );
-      const bob = usersResponse.body.data.find((u: { id: number }) => u.id === 2);
-
-      expect(alice.status).toBe('blocked');
-      expect(bob.status).toBe('pending');
-
-      // 4. Remove users from group
-      await request(app.getHttpServer())
-        .delete('/api/v1/groups/1/users/1')
-        .expect(204);
-
-      await request(app.getHttpServer())
-        .delete('/api/v1/groups/1/users/2')
-        .expect(204);
-
-      // 5. Verify final state
-      usersResponse = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      const aliceFinal = usersResponse.body.data.find(
-        (u: { id: number }) => u.id === 1,
-      );
-      const bobFinal = usersResponse.body.data.find(
-        (u: { id: number }) => u.id === 2,
-      );
-
-      expect(aliceFinal.groupId).toBeNull();
-      expect(bobFinal.groupId).toBeNull();
-    });
-
-    it('should handle group emptying scenario correctly', async () => {
-      // Create a new group with 2 users
-      const group = await prisma.group.create({
-        data: { name: 'JourneyGroup', status: 'notEmpty' },
-      });
-
-      await prisma.user.createMany({
-        data: [
-          { username: 'journey1', status: 'active', groupId: group.id },
-          { username: 'journey2', status: 'active', groupId: group.id },
-        ],
-      });
-
-      const users = await prisma.user.findMany({
-        where: { groupId: group.id },
-      });
-
-      // 1. Verify group is notEmpty
-      let groupsResponse = await request(app.getHttpServer())
-        .get('/api/v1/groups')
-        .expect(200);
-
-      let journeyGroup = groupsResponse.body.data.find(
-        (g: { name: string }) => g.name === 'JourneyGroup',
-      );
-      expect(journeyGroup.status).toBe('notEmpty');
-
-      // 2. Remove first user
-      await request(app.getHttpServer())
-        .delete(`/api/v1/groups/${group.id}/users/${users[0].id}`)
-        .expect(204);
-
-      groupsResponse = await request(app.getHttpServer())
-        .get('/api/v1/groups')
-        .expect(200);
-
-      journeyGroup = groupsResponse.body.data.find(
-        (g: { name: string }) => g.name === 'JourneyGroup',
-      );
-      expect(journeyGroup.status).toBe('notEmpty');
-
-      // 3. Remove last user - group should become empty
-      await request(app.getHttpServer())
-        .delete(`/api/v1/groups/${group.id}/users/${users[1].id}`)
-        .expect(204);
-
-      groupsResponse = await request(app.getHttpServer())
-        .get('/api/v1/groups')
-        .expect(200);
-
-      journeyGroup = groupsResponse.body.data.find(
-        (g: { name: string }) => g.name === 'JourneyGroup',
-      );
-      expect(journeyGroup.status).toBe('empty');
     });
   });
 

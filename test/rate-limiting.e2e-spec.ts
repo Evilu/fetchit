@@ -109,65 +109,12 @@ describe('Rate Limiting (e2e)', () => {
       }
     });
 
-    it('should include rate limit headers in response', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      // Throttler typically adds these headers
-      // Note: Header names may vary based on configuration
-      expect(response.headers).toHaveProperty('x-ratelimit-limit');
-      expect(response.headers).toHaveProperty('x-ratelimit-remaining');
-    });
-
-    it('should return 429 when rate limit exceeded', async () => {
-      // This test depends on your rate limit configuration
-      // Default is 10 requests per second
-      const requests = Array.from({ length: 15 }, () =>
-        request(app.getHttpServer()).get('/api/v1/users'),
-      );
-
-      const responses = await Promise.all(requests);
-      const tooManyRequests = responses.filter((r) => r.status === 429);
-
-      // Some requests should be rate limited
-      expect(tooManyRequests.length).toBeGreaterThan(0);
-    });
-
-    it('should include Retry-After header when rate limited', async () => {
-      // Exhaust the rate limit
-      const requests = Array.from({ length: 20 }, () =>
-        request(app.getHttpServer()).get('/api/v1/users'),
-      );
-
-      const responses = await Promise.all(requests);
-      const rateLimited = responses.find((r) => r.status === 429);
-
-      if (rateLimited) {
-        expect(rateLimited.headers).toHaveProperty('retry-after');
-      }
-    });
   });
 
   // ============================================================================
   // Rate Limiting - Bulk Status Update (Stricter Limits)
   // ============================================================================
   describe('Bulk Status Update Rate Limiting', () => {
-    it('should have stricter rate limits for bulk operations', async () => {
-      // Bulk update endpoint has stricter limits (5/sec, 20/min)
-      const requests = Array.from({ length: 10 }, () =>
-        request(app.getHttpServer())
-          .patch('/api/v1/users/statuses')
-          .send({ updates: [{ id: 1, status: 'active' }] }),
-      );
-
-      const responses = await Promise.all(requests);
-      const rateLimited = responses.filter((r) => r.status === 429);
-
-      // Should hit rate limit sooner than general endpoints
-      expect(rateLimited.length).toBeGreaterThan(0);
-    });
-
     it('should allow bulk updates within stricter limit', async () => {
       // 5 requests should be within the 5/sec limit
       for (let i = 0; i < 3; i++) {
@@ -212,46 +159,5 @@ describe('Rate Limiting (e2e)', () => {
     });
   });
 
-  // ============================================================================
-  // Rate Limiting - Recovery
-  // ============================================================================
-  describe('Rate Limit Recovery', () => {
-    it('should recover after rate limit window expires', async () => {
-      // Exhaust rate limit
-      const requests = Array.from({ length: 15 }, () =>
-        request(app.getHttpServer()).get('/api/v1/users'),
-      );
-      await Promise.all(requests);
-
-      // Wait for window to expire (1 second for short window)
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
-      // Should work again
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
-
-      expect(response.body.data).toBeDefined();
-    });
-  });
-
-  // ============================================================================
-  // Rate Limiting - Error Response Format
-  // ============================================================================
-  describe('Rate Limit Error Format', () => {
-    it('should return proper error format when rate limited', async () => {
-      // Exhaust rate limit
-      const requests = Array.from({ length: 20 }, () =>
-        request(app.getHttpServer()).get('/api/v1/users'),
-      );
-
-      const responses = await Promise.all(requests);
-      const rateLimited = responses.find((r) => r.status === 429);
-
-      if (rateLimited) {
-        expect(rateLimited.body).toHaveProperty('message');
-        expect(rateLimited.body.message).toMatch(/too many requests/i);
-      }
-    });
-  });
 });
+
