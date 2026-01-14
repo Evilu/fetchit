@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  pending
+  active
+  blocked
+}
+
+enum GroupStatus {
+  empty
+  notEmpty
+}
+
+model User {
+  id       Int         @id @default(autoincrement())
+  username String
+  status   UserStatus  @default(pending)
+  groupId  Int?        @map("group_id")
+  group    Group?      @relation(fields: [groupId], references: [id])
+
+  @@index([groupId])
+  @@index([status])
+  @@map("users")
+}
+
+model Group {
+  id     Int         @id @default(autoincrement())
+  name   String
+  status GroupStatus @default(empty)
+  users  User[]
+
+  @@index([status])
+  @@map("groups")
+}
