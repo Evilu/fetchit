@@ -39,6 +39,8 @@ export class GroupsService {
           id: true,
           name: true,
           status: true,
+          createdAt: true,
+          updatedAt: true,
         },
       }),
       this.prisma.group.count(),

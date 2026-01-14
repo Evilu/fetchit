@@ -10,4 +10,10 @@ export class GroupResponseDto {
 
   @ApiProperty({ enum: ['empty', 'notEmpty'], description: 'Group status' })
   status: GroupStatus;
+
+  @ApiProperty({ description: 'Creation timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt: Date;
 }

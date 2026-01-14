@@ -13,4 +13,10 @@ export class UserResponseDto {
 
   @ApiPropertyOptional({ description: 'Group ID the user belongs to', nullable: true })
   groupId: number | null;
+
+  @ApiProperty({ description: 'Creation timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt: Date;
 }

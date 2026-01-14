@@ -19,11 +19,13 @@ enum GroupStatus {
 }
 
 model User {
-  id       Int         @id @default(autoincrement())
-  username String
-  status   UserStatus  @default(pending)
-  groupId  Int?        @map("group_id")
-  group    Group?      @relation(fields: [groupId], references: [id])
+  id        Int         @id @default(autoincrement())
+  username  String
+  status    UserStatus  @default(pending)
+  groupId   Int?        @map("group_id")
+  group     Group?      @relation(fields: [groupId], references: [id])
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
 
   @@index([groupId])
   @@index([status])
@@ -31,10 +33,12 @@ model User {
 }
 
 model Group {
-  id     Int         @id @default(autoincrement())
-  name   String
-  status GroupStatus @default(empty)
-  users  User[]
+  id        Int         @id @default(autoincrement())
+  name      String
+  status    GroupStatus @default(empty)
+  users     User[]
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
 
   @@index([status])
   @@map("groups")
