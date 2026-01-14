@@ -1,29 +1,29 @@
--- Create enum types
-CREATE TYPE user_status AS ENUM ('pending', 'active', 'blocked');
-CREATE TYPE group_status AS ENUM ('empty', 'notEmpty');
+-- Create enum types (matching Prisma schema names)
+CREATE TYPE "UserStatus" AS ENUM ('pending', 'active', 'blocked');
+CREATE TYPE "GroupStatus" AS ENUM ('empty', 'notEmpty');
 
 -- Create groups table
-CREATE TABLE groups (
+CREATE TABLE "groups" (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    status group_status NOT NULL DEFAULT 'empty'
+    status "GroupStatus" NOT NULL DEFAULT 'empty'
 );
 
 -- Create users table
-CREATE TABLE users (
+CREATE TABLE "users" (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
-    status user_status NOT NULL DEFAULT 'pending',
-    group_id INTEGER REFERENCES groups(id)
+    status "UserStatus" NOT NULL DEFAULT 'pending',
+    group_id INTEGER REFERENCES "groups"(id)
 );
 
 -- Create indexes
-CREATE INDEX idx_users_group_id ON users(group_id);
-CREATE INDEX idx_users_status ON users(status);
-CREATE INDEX idx_groups_status ON groups(status);
+CREATE INDEX idx_users_group_id ON "users"(group_id);
+CREATE INDEX idx_users_status ON "users"(status);
+CREATE INDEX idx_groups_status ON "groups"(status);
 
 -- Seed data: Create groups
-INSERT INTO groups (name, status) VALUES
+INSERT INTO "groups" (name, status) VALUES
     ('Engineering', 'notEmpty'),
     ('Marketing', 'notEmpty'),
     ('Sales', 'notEmpty'),
@@ -31,7 +31,7 @@ INSERT INTO groups (name, status) VALUES
     ('Finance', 'notEmpty');
 
 -- Seed data: Create users
-INSERT INTO users (username, status, group_id) VALUES
+INSERT INTO "users" (username, status, group_id) VALUES
     ('alice', 'active', 1),
     ('bob', 'active', 1),
     ('charlie', 'pending', 1),
