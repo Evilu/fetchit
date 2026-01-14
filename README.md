@@ -1,98 +1,237 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Users & Groups API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A REST API for managing users and groups built with NestJS, Prisma, and PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requirements
 
-## Description
+- Node.js 18+
+- Docker and Docker Compose
+- Redis (optional, falls back to in-memory cache)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Quick Start
 
-## Project setup
+1. Start the database and Redis:
 
 ```bash
-$ npm install
+docker-compose up -d
 ```
 
-## Compile and run the project
+2. Install dependencies and set up the database:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+npx prisma db push
+npx ts-node prisma/seed.ts
 ```
 
-## Run tests
+3. Start the server:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev
 ```
 
-## Deployment
+The API is available at `http://localhost:3000/api/v1`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+API documentation: `http://localhost:3000/docs`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Configuration
+
+Copy `.env` and adjust values as needed:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:password@localhost:5432/postgres` |
+| `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `PORT` | Server port | `3000` |
+| `NODE_ENV` | Environment | `development` |
+| `CORS_ORIGIN` | Allowed origins | `*` |
+
+## API Endpoints
+
+### Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users` | Get users with offset pagination |
+| GET | `/api/v1/users/cursor` | Get users with cursor pagination |
+| PATCH | `/api/v1/users/statuses` | Bulk update user statuses |
+
+### Groups
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/groups` | Get groups with pagination |
+| DELETE | `/api/v1/groups/:groupId/users/:userId` | Remove user from group |
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/health` | Health check |
+
+## Pagination
+
+### Offset Pagination
+
+```
+GET /api/v1/users?limit=20&offset=0
+```
+
+Response:
+```json
+{
+  "data": [...],
+  "meta": {
+    "limit": 20,
+    "offset": 0,
+    "total": 100
+  }
+}
+```
+
+### Cursor Pagination
+
+Better for large datasets. Uses the last item's ID as cursor.
+
+```
+GET /api/v1/users/cursor?limit=20
+GET /api/v1/users/cursor?cursor=25&limit=20
+```
+
+Response:
+```json
+{
+  "data": [...],
+  "meta": {
+    "nextCursor": 45,
+    "hasNext": true
+  }
+}
+```
+
+## Bulk Status Update
+
+Update up to 500 users in a single request. The operation is atomic.
+
+```
+PATCH /api/v1/users/statuses
+Content-Type: application/json
+
+{
+  "updates": [
+    { "id": 1, "status": "active" },
+    { "id": 2, "status": "blocked" }
+  ]
+}
+```
+
+Valid statuses: `pending`, `active`, `blocked`
+
+## Remove User from Group
+
+When removing the last user from a group, the group status is automatically updated to `empty`.
+
+```
+DELETE /api/v1/groups/1/users/5
+```
+
+Returns `204 No Content` on success.
+
+## Error Responses
+
+All errors follow this format:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request",
+    "details": [
+      { "field": "limit", "reason": "limit must not be greater than 100" }
+    ]
+  }
+}
+```
+
+Error codes: `VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`
+
+## Rate Limiting
+
+| Endpoint | Limit |
+|----------|-------|
+| General | 10/sec, 100/min |
+| Bulk status update | 5/sec, 20/min |
+
+Returns `429 Too Many Requests` when exceeded.
+
+## Caching
+
+List endpoints are cached in Redis with a 30-second TTL. Cache is invalidated on mutations.
+
+## Testing
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Run e2e tests
+npm run test:e2e
+
+# Run with coverage
+npm run test:cov
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Project Structure
 
-## Resources
+```
+src/
+  common/         # Shared DTOs, filters, interceptors
+  database/       # Prisma service and module
+  cache/          # Redis cache service
+  users/          # Users module (controller, service, DTOs)
+  groups/         # Groups module (controller, service, DTOs)
+  health/         # Health check module
+prisma/
+  schema.prisma   # Database schema
+  seed.ts         # Seed data
+test/
+  *.e2e-spec.ts   # End-to-end tests
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Scripts
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Command | Description |
+|---------|-------------|
+| `npm run start:dev` | Start in development mode with hot reload |
+| `npm run start:prod` | Start production build |
+| `npm run build` | Build for production |
+| `npm run test:e2e` | Run end-to-end tests |
+| `npm run lint` | Lint and fix code |
 
-## Support
+## Database Schema
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```prisma
+model User {
+  id        Int        @id @default(autoincrement())
+  username  String
+  status    UserStatus @default(pending)
+  groupId   Int?
+  group     Group?     @relation(...)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
 
-## Stay in touch
+model Group {
+  id        Int         @id @default(autoincrement())
+  name      String
+  status    GroupStatus @default(empty)
+  users     User[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+enum UserStatus { pending, active, blocked }
+enum GroupStatus { empty, notEmpty }
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT

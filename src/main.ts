@@ -52,15 +52,28 @@ async function bootstrap() {
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Users & Groups API')
-    .setDescription('Production-ready REST API for managing users and groups with caching and rate limiting')
-    .setVersion('1.0')
-    .addTag('users', 'User management endpoints')
-    .addTag('groups', 'Group management endpoints')
-    .addTag('health', 'Health check endpoints')
+    .setDescription(
+      'REST API for managing users and groups. Features include pagination (offset and cursor-based), ' +
+      'bulk operations, caching with Redis, rate limiting, and transactional data integrity.',
+    )
+    .setVersion('1.0.0')
+    .setContact('API Support', '', 'support@example.com')
+    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
+    .addServer('http://localhost:3000', 'Development server')
+    .addTag('users', 'User management operations including pagination and bulk status updates')
+    .addTag('groups', 'Group management operations including user removal')
+    .addTag('health', 'Application health checks for monitoring and load balancers')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+    },
+  });
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
