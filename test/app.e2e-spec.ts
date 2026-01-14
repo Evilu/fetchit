@@ -261,11 +261,11 @@ describe('API Integration Tests (e2e)', () => {
       // First create 500 users
       const createValues = Array.from(
         { length: 500 },
-        (_, i) => `(${i + 100}, 'bulk_user_${i}', 'pending', NULL)`,
+        (_, i) => `(${i + 100}, 'bulk_user_${i}', 'pending', NULL, NOW(), NOW())`,
       ).join(',');
 
       await prisma.$executeRawUnsafe(`
-        INSERT INTO "users" (id, username, status, group_id) VALUES ${createValues}
+        INSERT INTO "users" (id, username, status, group_id, created_at, updated_at) VALUES ${createValues}
       `);
 
       const updates = Array.from({ length: 500 }, (_, i) => ({

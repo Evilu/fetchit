@@ -127,29 +127,29 @@ export async function resetDatabase(prisma: PrismaService): Promise<void> {
 
   // Re-seed groups
   await prisma.$executeRaw`
-    INSERT INTO "groups" (id, name, status) VALUES
-      (1, 'Engineering', 'notEmpty'),
-      (2, 'Marketing', 'notEmpty'),
-      (3, 'Sales', 'notEmpty'),
-      (4, 'HR', 'empty'),
-      (5, 'Finance', 'notEmpty')
+    INSERT INTO "groups" (id, name, status, created_at, updated_at) VALUES
+      (1, 'Engineering', 'notEmpty', NOW(), NOW()),
+      (2, 'Marketing', 'notEmpty', NOW(), NOW()),
+      (3, 'Sales', 'notEmpty', NOW(), NOW()),
+      (4, 'HR', 'empty', NOW(), NOW()),
+      (5, 'Finance', 'notEmpty', NOW(), NOW())
   `;
 
   // Re-seed users
   await prisma.$executeRaw`
-    INSERT INTO "users" (id, username, status, group_id) VALUES
-      (1, 'alice', 'active', 1),
-      (2, 'bob', 'active', 1),
-      (3, 'charlie', 'pending', 1),
-      (4, 'david', 'active', 2),
-      (5, 'eve', 'blocked', 2),
-      (6, 'frank', 'active', 3),
-      (7, 'grace', 'pending', 3),
-      (8, 'henry', 'active', 3),
-      (9, 'ivy', 'active', 5),
-      (10, 'jack', 'pending', NULL),
-      (11, 'karen', 'active', NULL),
-      (12, 'leo', 'blocked', NULL)
+    INSERT INTO "users" (id, username, status, group_id, created_at, updated_at) VALUES
+      (1, 'alice', 'active', 1, NOW(), NOW()),
+      (2, 'bob', 'active', 1, NOW(), NOW()),
+      (3, 'charlie', 'pending', 1, NOW(), NOW()),
+      (4, 'david', 'active', 2, NOW(), NOW()),
+      (5, 'eve', 'blocked', 2, NOW(), NOW()),
+      (6, 'frank', 'active', 3, NOW(), NOW()),
+      (7, 'grace', 'pending', 3, NOW(), NOW()),
+      (8, 'henry', 'active', 3, NOW(), NOW()),
+      (9, 'ivy', 'active', 5, NOW(), NOW()),
+      (10, 'jack', 'pending', NULL, NOW(), NOW()),
+      (11, 'karen', 'active', NULL, NOW(), NOW()),
+      (12, 'leo', 'blocked', NULL, NOW(), NOW())
   `;
 
   // Reset sequences
@@ -170,11 +170,11 @@ export async function createManyUsers(
     const id = start + i;
     const statuses = ['pending', 'active', 'blocked'] as const;
     const status = statuses[i % 3];
-    return `(${id}, 'testuser_${id}', '${status}', NULL)`;
+    return `(${id}, 'testuser_${id}', '${status}', NULL, NOW(), NOW())`;
   }).join(',\n');
 
   await prisma.$executeRawUnsafe(`
-    INSERT INTO "users" (id, username, status, group_id) VALUES
+    INSERT INTO "users" (id, username, status, group_id, created_at, updated_at) VALUES
     ${values}
   `);
 
@@ -248,10 +248,14 @@ export interface UserResponse {
   username: string;
   status: 'pending' | 'active' | 'blocked';
   groupId: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface GroupResponse {
   id: number;
   name: string;
   status: 'empty' | 'notEmpty';
+  createdAt: string;
+  updatedAt: string;
 }
