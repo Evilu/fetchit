@@ -2,8 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { PrismaService } from './database/prisma.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -11,7 +14,14 @@ async function bootstrap() {
 
   // Security
   app.use(helmet());
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  });
+
+  // Compression
+  app.use(compression());
 
   // Global prefix
   app.setGlobalPrefix('api/v1');
@@ -28,13 +38,21 @@ async function bootstrap() {
     }),
   );
 
+  // Global interceptors
+  app.useGlobalInterceptors(new LoggingInterceptor());
+
   // Global exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Graceful shutdown
+  app.enableShutdownHooks();
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
 
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Users & Groups API')
-    .setDescription('REST API for managing users and groups')
+    .setDescription('Production-ready REST API for managing users and groups with caching and rate limiting')
     .setVersion('1.0')
     .addTag('users', 'User management endpoints')
     .addTag('groups', 'Group management endpoints')
@@ -48,5 +66,6 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}`);
   logger.log(`Swagger documentation: http://localhost:${port}/docs`);
+  logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();
