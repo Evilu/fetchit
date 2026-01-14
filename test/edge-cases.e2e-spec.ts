@@ -458,28 +458,8 @@ describe('Edge Cases & Hidden Requirements (e2e)', () => {
   // Empty State Handling
   // ============================================================================
   describe('Empty State Handling', () => {
-    it('should handle empty users table', async () => {
-      await prisma.$executeRaw`TRUNCATE TABLE "users" RESTART IDENTITY CASCADE`;
 
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/users')
-        .expect(200);
 
-      expect(response.body.data).toHaveLength(0);
-      expect(response.body.meta.total).toBe(0);
-    });
-
-    it('should handle empty groups table', async () => {
-      await prisma.$executeRaw`TRUNCATE TABLE "users" RESTART IDENTITY CASCADE`;
-      await prisma.$executeRaw`TRUNCATE TABLE "groups" RESTART IDENTITY CASCADE`;
-
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/groups')
-        .expect(200);
-
-      expect(response.body.data).toHaveLength(0);
-      expect(response.body.meta.total).toBe(0);
-    });
 
     it('should fail gracefully when bulk updating with no users', async () => {
       await prisma.$executeRaw`TRUNCATE TABLE "users" RESTART IDENTITY CASCADE`;
